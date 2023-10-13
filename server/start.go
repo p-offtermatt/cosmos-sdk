@@ -260,6 +260,19 @@ func startStandAlone(ctx *Context, clientCtx client.Context, appCreator types.Ap
 		}
 	}
 
+	// Add the tx service to the gRPC router. We only need to register this
+	// service if API or gRPC is enabled, and avoid doing so in the general
+	// case, because it spawns a new local tendermint RPC client.
+	if config.API.Enable || config.GRPC.Enable { // && tmNode != nil {
+		// re-assign for making the client available below
+		// do not use := to avoid shadowing clientCtx
+		// clientCtx = clientCtx.WithClient(local.New(tmNode))
+
+		app.RegisterTxService(clientCtx)
+		app.RegisterTendermintService(clientCtx)
+		app.RegisterNodeService(clientCtx)
+	}
+
 	svr, err := server.NewServer(addr, transport, app)
 	if err != nil {
 		return fmt.Errorf("error creating listener: %v", err)
