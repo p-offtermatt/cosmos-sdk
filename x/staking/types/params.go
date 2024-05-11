@@ -23,6 +23,9 @@ const (
 	// Default maximum number of bonded validators
 	DefaultMaxValidators uint32 = 100
 
+	// Default maximum number of consensus validators. These are passed to the chain's consensus protocol, the rest are not.
+	DefaultMaxConsensusValidators uint32 = 100
+
 	// Default maximum entries in a UBD/RED pair
 	DefaultMaxEntries uint32 = 7
 
@@ -50,6 +53,7 @@ var (
 // NewParams creates a new Params instance
 func NewParams(unbondingTime time.Duration,
 	maxValidators,
+	maxConsensusValidators,
 	maxEntries,
 	historicalEntries uint32,
 	bondDenom string,
@@ -59,10 +63,11 @@ func NewParams(unbondingTime time.Duration,
 	validatorLiquidStakingCap sdk.Dec,
 ) Params {
 	return Params{
-		UnbondingTime:     unbondingTime,
-		MaxValidators:     maxValidators,
-		MaxEntries:        maxEntries,
-		HistoricalEntries: historicalEntries,
+		UnbondingTime:          unbondingTime,
+		MaxValidators:          maxValidators,
+		MaxConsensusValidators: maxConsensusValidators,
+		MaxEntries:             maxEntries,
+		HistoricalEntries:      historicalEntries,
 
 		BondDenom:                 bondDenom,
 		MinCommissionRate:         minCommissionRate,
@@ -77,6 +82,7 @@ func DefaultParams() Params {
 	return NewParams(
 		DefaultUnbondingTime,
 		DefaultMaxValidators,
+		DefaultMaxConsensusValidators,
 		DefaultMaxEntries,
 		DefaultHistoricalEntries,
 		sdk.DefaultBondDenom,
@@ -120,6 +126,10 @@ func (p Params) Validate() error {
 	}
 
 	if err := validateMaxValidators(p.MaxValidators); err != nil {
+		return err
+	}
+
+	if err := validateMaxConsensusValidators(p.MaxConsensusValidators); err != nil {
 		return err
 	}
 
@@ -175,6 +185,19 @@ func validateMaxValidators(i interface{}) error {
 
 	if v == 0 {
 		return fmt.Errorf("max validators must be positive: %d", v)
+	}
+
+	return nil
+}
+
+func validateMaxConsensusValidators(i interface{}) error {
+	v, ok := i.(uint32)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	if v == 0 {
+		return fmt.Errorf("max consensus validators must be positive: %d", v)
 	}
 
 	return nil

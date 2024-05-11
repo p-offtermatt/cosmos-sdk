@@ -76,6 +76,9 @@ type ValidatorSet interface {
 
 	// MaxValidators returns the maximum amount of bonded validators
 	MaxValidators(sdk.Context) uint32
+
+	// MaxConsensusValidators returns the maximum amount of validators to be passed to the consensus protocol
+	MaxConsensusValidators(sdk.Context) uint32
 }
 
 // DelegationSet expected properties for the set of all delegations for a particular (noalias)

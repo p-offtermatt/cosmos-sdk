@@ -26,10 +26,18 @@ func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
 	// unbonded after the Endblocker (go from Bonded -> Unbonding during
 	// ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
 	// UnbondAllMatureValidatorQueue).
-	validatorUpdates, err := k.ApplyAndReturnValidatorSetUpdates(ctx)
+	lastValidators := k.GetLastValidators(ctx)
+	// NOTE-JT: ApplyAndReturnValidatorSetUpdates seems to both update LastValidators and return the updates
+	// We ignore the returned updates, instead getting LastValidators before and after the
+	// update and diffing them to get the updates
+	_, err := k.ApplyAndReturnValidatorSetUpdates(ctx)
 	if err != nil {
 		panic(err)
 	}
+	maxConsVals := k.MaxConsensusValidators(ctx)
+	nextValidators := k.GetLastValidators(ctx)[:maxConsVals]
+
+	validatorUpdates := k.diffValidators(ctx, lastValidators, nextValidators)
 
 	// unbond all mature validators from the unbonding queue
 	k.UnbondAllMatureValidators(ctx)
@@ -93,6 +101,40 @@ func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
 	}
 
 	return validatorUpdates
+}
+
+func (k Keeper) diffValidators(ctx sdk.Context, lastValidators []types.Validator, nextValidators []types.Validator) (updates []abci.ValidatorUpdate) {
+	// make a map of the last validators
+	// NOTE: we use operator address as the key
+	// as it is invariant
+	lastMap := make(map[string]types.Validator, len(lastValidators))
+	for _, val := range lastValidators {
+		lastMap[val.GetOperator().String()] = val
+	}
+
+	nextMap := make(map[string]types.Validator, len(nextValidators))
+	for _, val := range nextValidators {
+		nextMap[val.GetOperator().String()] = val
+	}
+
+	// iterate nextValidators and add the validator to the updates if it is not in the last validator set,
+	// or if the voting power has changed
+	for _, val := range nextValidators {
+		if lastVal, ok := lastMap[val.GetOperator().String()]; !ok {
+			updates = append(updates, val.ABCIValidatorUpdate(k.PowerReduction(ctx)))
+		} else if !val.Equal(&lastVal) {
+			updates = append(updates, val.ABCIValidatorUpdate(k.PowerReduction(ctx)))
+		}
+	}
+
+	// iterate lastValidators and add the validator to the updates if it is not in the current validator set
+	for _, val := range lastValidators {
+		if _, ok := nextMap[val.GetOperator().String()]; !ok {
+			updates = append(updates, val.ABCIValidatorUpdateZero())
+		}
+	}
+
+	return updates
 }
 
 // ApplyAndReturnValidatorSetUpdates applies and return accumulated updates to the bonded validator set. Also,

@@ -19,6 +19,11 @@ func (k Keeper) MaxValidators(ctx sdk.Context) uint32 {
 	return k.GetParams(ctx).MaxValidators
 }
 
+// MaxConsensusValidators - Maximum number of validators passed to the consensus protocol
+func (k Keeper) MaxConsensusValidators(ctx sdk.Context) uint32 {
+	return k.GetParams(ctx).MaxConsensusValidators
+}
+
 // MaxEntries - Maximum number of simultaneous unbonding
 // delegations or redelegations (per pair/trio)
 func (k Keeper) MaxEntries(ctx sdk.Context) uint32 {
