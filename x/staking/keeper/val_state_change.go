@@ -26,7 +26,9 @@ func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
 	// unbonded after the Endblocker (go from Bonded -> Unbonding during
 	// ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
 	// UnbondAllMatureValidatorQueue).
-	lastValidators := k.GetLastValidators(ctx)
+	lastValidators := k.GetLastConsensusValidators(ctx)
+	fmt.Println("lastValidators", len(lastValidators))
+
 	// NOTE-JT: ApplyAndReturnValidatorSetUpdates seems to both update LastValidators and return the updates
 	// We ignore the returned updates, instead getting LastValidators before and after the
 	// update and diffing them to get the updates
@@ -34,8 +36,14 @@ func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("lastValidatorsAfterApplying", len(k.GetLastConsensusValidators(ctx)))
+
 	maxConsVals := k.MaxConsensusValidators(ctx)
 	nextValidators := k.GetLastValidators(ctx)[:maxConsVals]
+
+	k.SetLastConsensusValidators(ctx, nextValidators)
+
+	fmt.Println("nextValidators", len(nextValidators))
 
 	validatorUpdates := k.diffValidators(ctx, lastValidators, nextValidators)
 

@@ -281,10 +281,18 @@ func (k Keeper) DeleteLastValidatorPower(ctx sdk.Context, operator sdk.ValAddres
 	store.Delete(types.GetLastValidatorPowerKey(operator))
 }
 
-// returns an iterator for the consensus validators in the last block
+// returns an iterator for the validators in the last block
 func (k Keeper) LastValidatorsIterator(ctx sdk.Context) (iterator sdk.Iterator) {
 	store := ctx.KVStore(k.storeKey)
 	iterator = sdk.KVStorePrefixIterator(store, types.LastValidatorPowerKey)
+
+	return iterator
+}
+
+// returns an iterator for the consensus validators in the last block
+func (k Keeper) LastConsensusValidatorsIterator(ctx sdk.Context) (iterator sdk.Iterator) {
+	store := ctx.KVStore(k.storeKey)
+	iterator = sdk.KVStorePrefixIterator(store, types.LastConsensusValidatorsKey)
 
 	return iterator
 }
@@ -310,19 +318,29 @@ func (k Keeper) IterateLastValidatorPowers(ctx sdk.Context, handler func(operato
 
 // get the group of the bonded validators
 func (k Keeper) GetLastValidators(ctx sdk.Context) (validators []types.Validator) {
+	return k.getValidatorsHelper(ctx, types.LastValidatorPowerKey, k.MaxValidators(ctx))
+}
+
+func (k Keeper) GetLastConsensusValidators(ctx sdk.Context) (validators []types.Validator) {
+	return k.getValidatorsHelper(ctx, types.LastConsensusValidatorsKey, k.MaxConsensusValidators(ctx))
+}
+
+// Gets a group of bonded validators, which are stored under the provided key.
+// If there are more than maxResults validators, the function will panic.
+func (k Keeper) getValidatorsHelper(ctx sdk.Context, key []byte, maxResults uint32) (validators []types.Validator) {
 	store := ctx.KVStore(k.storeKey)
 
 	// add the actual validator power sorted store
 	maxValidators := k.MaxValidators(ctx)
 	validators = make([]types.Validator, maxValidators)
 
-	iterator := sdk.KVStorePrefixIterator(store, types.LastValidatorPowerKey)
+	iterator := sdk.KVStorePrefixIterator(store, key)
 	defer iterator.Close()
 
 	i := 0
 	for ; iterator.Valid(); iterator.Next() {
 		// sanity check
-		if i >= int(maxValidators) {
+		if i >= int(maxResults) {
 			panic("more validators than maxValidators found")
 		}
 
@@ -334,6 +352,27 @@ func (k Keeper) GetLastValidators(ctx sdk.Context) (validators []types.Validator
 	}
 
 	return validators[:i] // trim
+}
+
+func (k Keeper) SetLastConsensusValidators(ctx sdk.Context, validators []types.Validator) {
+	store := ctx.KVStore(k.storeKey)
+
+	// clear the previous validator power store
+	iterator := k.LastConsensusValidatorsIterator(ctx)
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		store.Delete(iterator.Key())
+	}
+
+	powerReduction := k.PowerReduction(ctx)
+
+	for _, val := range validators {
+		store.Set(
+			types.GetLastConsensusValidatorPowerKey(val.GetOperator()),
+			k.cdc.MustMarshal(&gogotypes.Int64Value{Value: val.GetConsensusPower(powerReduction)}),
+		)
+	}
 }
 
 // GetUnbondingValidators returns a slice of mature validator addresses that

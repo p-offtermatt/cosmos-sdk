@@ -65,6 +65,9 @@ var (
 	TotalLiquidStakedTokensKey         = []byte{0x85} // key for total liquid staked tokens
 	TokenizeSharesLockPrefix           = []byte{0x86} // key for locking tokenize shares
 	TokenizeSharesUnlockQueuePrefix    = []byte{0x87} // key for the queue that unlocks tokenize shares
+
+	LastConsensusValidatorsKey = []byte{0x91} // prefix for the last consensus validators
+
 )
 
 // UnbondingType defines the type of unbonding operation
@@ -155,6 +158,11 @@ func GetValidatorsByPowerIndexKey(validator Validator, powerReduction math.Int) 
 // GetLastValidatorPowerKey creates the bonded validator index key for an operator address
 func GetLastValidatorPowerKey(operator sdk.ValAddress) []byte {
 	return append(LastValidatorPowerKey, address.MustLengthPrefix(operator)...)
+}
+
+// GetLastValidatorPowerKey creates the bonded validator index key for an operator address
+func GetLastConsensusValidatorPowerKey(operator sdk.ValAddress) []byte {
+	return append(LastConsensusValidatorsKey, address.MustLengthPrefix(operator)...)
 }
 
 // ParseValidatorPowerRankKey parses the validators operator address from power rank key
