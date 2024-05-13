@@ -18,6 +18,7 @@ import (
 const (
 	UnbondingTime             = "unbonding_time"
 	MaxValidators             = "max_validators"
+	MaxConsensusValidators    = "max_consensus_validators"
 	HistoricalEntries         = "historical_entries"
 	ValidatorBondFactor       = "validator_bond_factor"
 	GlobalLiquidStakingCap    = "global_liquid_staking_cap"
@@ -32,6 +33,10 @@ func genUnbondingTime(r *rand.Rand) (ubdTime time.Duration) {
 // genMaxValidators returns randomized MaxValidators
 func genMaxValidators(r *rand.Rand) (maxValidators uint32) {
 	return uint32(r.Intn(250) + 1)
+}
+
+func genMaxConsensusValidators(r *rand.Rand, maxValidators uint32) (maxConsensusValidators uint32) {
+	return uint32(r.Intn(int(maxValidators)) + 1)
 }
 
 // getHistEntries returns randomized HistoricalEntries between 0-100.
@@ -60,6 +65,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 	var (
 		unbondingTime             time.Duration
 		maxValidators             uint32
+		maxConsensusValidators    uint32
 		historicalEntries         uint32
 		minCommissionRate         sdk.Dec
 		validatorBondFactor       sdk.Dec
@@ -75,6 +81,11 @@ func RandomizedGenState(simState *module.SimulationState) {
 	simState.AppParams.GetOrGenerate(
 		simState.Cdc, MaxValidators, &maxValidators, simState.Rand,
 		func(r *rand.Rand) { maxValidators = genMaxValidators(r) },
+	)
+
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, MaxConsensusValidators, &maxConsensusValidators, simState.Rand,
+		func(r *rand.Rand) { maxConsensusValidators = genMaxConsensusValidators(r, maxValidators) },
 	)
 
 	simState.AppParams.GetOrGenerate(
@@ -101,7 +112,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 	params := types.NewParams(
 		simState.UnbondTime,
 		maxValidators,
-		maxValidators,
+		maxConsensusValidators,
 		7,
 		historicalEntries,
 		sdk.DefaultBondDenom,
