@@ -101,6 +101,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 	params := types.NewParams(
 		simState.UnbondTime,
 		maxValidators,
+		maxValidators,
 		7,
 		historicalEntries,
 		sdk.DefaultBondDenom,
